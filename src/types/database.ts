@@ -7,6 +7,8 @@ export interface Folder {
   width: number;
   height: number | null;
   color: string;
+  is_docked?: boolean;
+  docked_order?: number;
   created_at: string;
   updated_at: string;
 }

@@ -41,6 +41,14 @@ interface CanvasState {
   setActiveDragLinkId: (id: string | null) => void;
   setActiveTargetFolderId: (id: string | null) => void;
 
+  // Dock Panel (Waterfall Organizer Panel)
+  isDockPanelOpen: boolean;
+  dockPanelWidth: number;
+  setDockPanelOpen: (open: boolean) => void;
+  toggleDockPanel: () => void;
+  setDockPanelWidth: (width: number) => void;
+  dockFolder: (folderId: string, isDocked: boolean) => void;
+
   // Data Actions
   loadCanvasData: () => Promise<void>;
   createFolder: (position_x: number, position_y: number, title?: string, color?: string) => Promise<Folder>;
@@ -76,6 +84,34 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
     activeTargetFolderId: null,
     contextMenu: { isOpen: false, screenX: 0, screenY: 0, worldX: 0, worldY: 0 },
     isLoading: true,
+
+    // Dock Panel State
+    isDockPanelOpen: false,
+    dockPanelWidth: 400,
+    setDockPanelOpen: (open) => set({ isDockPanelOpen: open }),
+    toggleDockPanel: () => set((state) => ({ isDockPanelOpen: !state.isDockPanelOpen })),
+    setDockPanelWidth: (width) => set({ dockPanelWidth: Math.max(280, Math.min(width, 800)) }),
+    dockFolder: (folderId, isDocked) => {
+      set((state) => ({
+        folders: state.folders.map((f) =>
+          f.id === folderId ? { ...f, is_docked: isDocked, updated_at: new Date().toISOString() } : f
+        ),
+        // If docked, open dock panel so user sees it right away
+        isDockPanelOpen: isDocked ? true : state.isDockPanelOpen,
+      }));
+
+      syncQueue.enqueue(
+        `dock_folder_${folderId}`,
+        async () => {
+          const { error } = await supabase
+            .from('folders')
+            .update({ is_docked: isDocked, updated_at: new Date().toISOString() })
+            .eq('id', folderId);
+          if (error) throw error;
+        },
+        `${isDocked ? 'Dock' : 'Undock'} folder ${folderId}`
+      );
+    },
 
     setViewport: (viewportOrFn) => {
       set((state) => {
@@ -303,6 +339,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => {
         width: 340,
         height: null,
         color,
+        is_docked: false,
+        docked_order: 0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };

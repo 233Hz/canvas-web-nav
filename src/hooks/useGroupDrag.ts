@@ -107,14 +107,31 @@ export function useGroupDrag() {
     [isDragging, viewport, folders, getSnappedPosition, updateFoldersPositions]
   );
 
-  const endGroupDrag = useCallback(() => {
-    if (isDragging) {
-      setIsDragging(false);
-      primaryFolderIdRef.current = null;
-      initialPositionsRef.current.clear();
-      clearActiveGuides();
-    }
-  }, [isDragging, clearActiveGuides]);
+  const endGroupDrag = useCallback(
+    (screenX?: number) => {
+      if (isDragging) {
+        const { isDockPanelOpen, dockPanelWidth, dockFolder } = useCanvasStore.getState();
+        const primaryId = primaryFolderIdRef.current;
+
+        // Check if dropped into dock panel
+        if (
+          primaryId &&
+          isDockPanelOpen &&
+          screenX !== undefined &&
+          screenX >= window.innerWidth - dockPanelWidth
+        ) {
+          const selectedIds = Array.from(initialPositionsRef.current.keys());
+          selectedIds.forEach((id) => dockFolder(id, true));
+        }
+
+        setIsDragging(false);
+        primaryFolderIdRef.current = null;
+        initialPositionsRef.current.clear();
+        clearActiveGuides();
+      }
+    },
+    [isDragging, clearActiveGuides]
+  );
 
   return {
     isDragging,

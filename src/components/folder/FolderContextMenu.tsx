@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Pencil, Palette, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Palette, Plus, Trash2, PanelRight, ArrowUpRight } from 'lucide-react';
 import { Folder } from '../../types/database';
 
 interface FolderContextMenuProps {
@@ -11,6 +11,7 @@ interface FolderContextMenuProps {
   onAddLink: () => void;
   onChangeColor: (color: string) => void;
   onDelete: () => void;
+  onToggleDock?: () => void;
 }
 
 const COLOR_OPTIONS = [
@@ -32,6 +33,7 @@ export const FolderContextMenu: React.FC<FolderContextMenuProps> = ({
   onAddLink,
   onChangeColor,
   onDelete,
+  onToggleDock,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -52,7 +54,7 @@ export const FolderContextMenu: React.FC<FolderContextMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 min-w-[200px] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl shadow-2xl p-1.5 text-xs text-slate-200 animate-in fade-in zoom-in-95 duration-100"
+      className="fixed z-50 min-w-[200px] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl p-1.5 text-xs text-slate-200 animate-in fade-in zoom-in-95 duration-100"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
@@ -64,7 +66,7 @@ export const FolderContextMenu: React.FC<FolderContextMenuProps> = ({
           onClose();
           onAddLink();
         }}
-        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-800 text-left font-medium"
+        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800 text-left font-medium"
       >
         <Plus className="w-4 h-4 text-sky-400" />
         <span>添加网址链接</span>
@@ -75,11 +77,33 @@ export const FolderContextMenu: React.FC<FolderContextMenuProps> = ({
           onClose();
           onRename();
         }}
-        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-800 text-left"
+        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800 text-left"
       >
         <Pencil className="w-4 h-4 text-slate-400" />
         <span>重命名文件夹</span>
       </button>
+
+      {onToggleDock && (
+        <button
+          onClick={() => {
+            onClose();
+            onToggleDock();
+          }}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800 text-left"
+        >
+          {folder.is_docked ? (
+            <>
+              <ArrowUpRight className="w-4 h-4 text-sky-400" />
+              <span>移回无限画布</span>
+            </>
+          ) : (
+            <>
+              <PanelRight className="w-4 h-4 text-indigo-400" />
+              <span>收纳到侧边面板</span>
+            </>
+          )}
+        </button>
+      )}
 
       {/* Color Presets */}
       <div className="px-3 py-2">
@@ -112,7 +136,7 @@ export const FolderContextMenu: React.FC<FolderContextMenuProps> = ({
           onClose();
           onDelete();
         }}
-        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-500/20 text-red-400 hover:text-red-300 text-left"
+        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-red-500/20 text-red-400 hover:text-red-300 text-left"
       >
         <Trash2 className="w-4 h-4" />
         <span>删除文件夹块</span>
