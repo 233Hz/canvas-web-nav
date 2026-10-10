@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Pencil, Palette, Plus, Trash2, PanelRight, ArrowUpRight } from 'lucide-react';
+import { Plus, Trash2, Pencil, FolderInput, FolderOutput } from 'lucide-react';
 import { Folder } from '../../types/database';
 
 interface FolderContextMenuProps {
@@ -9,20 +9,9 @@ interface FolderContextMenuProps {
   onClose: () => void;
   onRename: () => void;
   onAddLink: () => void;
-  onChangeColor: (color: string) => void;
   onDelete: () => void;
-  onToggleDock?: () => void;
+  onTogglePanel?: () => void;
 }
-
-const COLOR_OPTIONS = [
-  { label: '经典蓝', value: '#3b82f6' },
-  { label: '典雅紫', value: '#8b5cf6' },
-  { label: '薄荷绿', value: '#10b981' },
-  { label: '琥珀黄', value: '#f59e0b' },
-  { label: '玫瑰红', value: '#f43f5e' },
-  { label: '青空蓝', value: '#06b6d4' },
-  { label: '深空灰', value: '#64748b' },
-];
 
 export const FolderContextMenu: React.FC<FolderContextMenuProps> = ({
   isOpen,
@@ -31,9 +20,8 @@ export const FolderContextMenu: React.FC<FolderContextMenuProps> = ({
   onClose,
   onRename,
   onAddLink,
-  onChangeColor,
   onDelete,
-  onToggleDock,
+  onTogglePanel,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -54,92 +42,72 @@ export const FolderContextMenu: React.FC<FolderContextMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 min-w-[200px] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl p-1.5 text-xs text-slate-200 animate-in fade-in zoom-in-95 duration-100"
+      className="fixed z-50 min-w-[150px] bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl p-1 text-xs text-slate-200 animate-in fade-in zoom-in-95 duration-100 select-none"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
       }}
       onClick={(e) => e.stopPropagation()}
     >
+      {/* 1. 添加图标 (Figure 1: 添加图标) */}
       <button
         onClick={() => {
           onClose();
           onAddLink();
         }}
-        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800 text-left font-medium"
+        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-800 text-left font-medium text-slate-100 hover:text-sky-300 transition-colors"
       >
         <Plus className="w-4 h-4 text-sky-400" />
-        <span>添加网址链接</span>
+        <span>添加图标</span>
       </button>
 
-      <button
-        onClick={() => {
-          onClose();
-          onRename();
-        }}
-        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800 text-left"
-      >
-        <Pencil className="w-4 h-4 text-slate-400" />
-        <span>重命名文件夹</span>
-      </button>
-
-      {onToggleDock && (
+      {/* 2. 移出面板 / 收纳到面板 (if applicable) */}
+      {onTogglePanel && (
         <button
           onClick={() => {
             onClose();
-            onToggleDock();
+            onTogglePanel();
           }}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800 text-left"
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-800 text-left text-slate-300 hover:text-white transition-colors"
         >
-          {folder.is_docked ? (
+          {folder.panel_id ? (
             <>
-              <ArrowUpRight className="w-4 h-4 text-sky-400" />
-              <span>移回无限画布</span>
+              <FolderOutput className="w-4 h-4 text-indigo-400" />
+              <span>移出面板</span>
             </>
           ) : (
             <>
-              <PanelRight className="w-4 h-4 text-indigo-400" />
-              <span>收纳到侧边面板</span>
+              <FolderInput className="w-4 h-4 text-indigo-400" />
+              <span>收纳到面板</span>
             </>
           )}
         </button>
       )}
 
-      {/* Color Presets */}
-      <div className="px-3 py-2">
-        <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
-          <Palette className="w-3.5 h-3.5" />
-          <span className="text-[11px]">选择标识配色</span>
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {COLOR_OPTIONS.map((c) => (
-            <button
-              key={c.value}
-              onClick={() => {
-                onChangeColor(c.value);
-                onClose();
-              }}
-              title={c.label}
-              className={`w-4 h-4 rounded-full transition-transform hover:scale-125 ${
-                folder.color === c.value ? 'ring-2 ring-white ring-offset-1 ring-offset-slate-900' : ''
-              }`}
-              style={{ backgroundColor: c.value }}
-            />
-          ))}
-        </div>
-      </div>
+      {/* 3. 重命名 */}
+      <button
+        onClick={() => {
+          onClose();
+          onRename();
+        }}
+        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-800 text-left text-slate-400 hover:text-slate-200 transition-colors"
+      >
+        <Pencil className="w-3.5 h-3.5" />
+        <span>重命名</span>
+      </button>
 
       <div className="h-px bg-slate-800 my-1" />
 
+      {/* 4. 删除 (Figure 1: 删除) */}
       <button
         onClick={() => {
           onClose();
           onDelete();
         }}
-        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-red-500/20 text-red-400 hover:text-red-300 text-left"
+        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-500/20 text-red-400 hover:text-red-300 text-left font-medium transition-colors"
       >
         <Trash2 className="w-4 h-4" />
-        <span>删除文件夹块</span>
+        <span>删除</span>
       </button>
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { FolderPlus, RotateCcw, Magnet, Inbox } from 'lucide-react';
+import { FolderPlus, RotateCcw, Magnet, LayoutGrid } from 'lucide-react';
 import { useCanvasStore } from '../../store/canvasStore';
 
 export const CanvasContextMenu: React.FC = () => {
@@ -7,11 +7,10 @@ export const CanvasContextMenu: React.FC = () => {
     contextMenu,
     closeContextMenu,
     createFolder,
+    createPanel,
     setViewport,
     gridSnapping,
     setGridSnapping,
-    toggleDockPanel,
-    isDockPanelOpen,
   } = useCanvasStore();
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -35,6 +34,11 @@ export const CanvasContextMenu: React.FC = () => {
     await createFolder(contextMenu.worldX, contextMenu.worldY);
   };
 
+  const handleCreatePanel = () => {
+    closeContextMenu();
+    createPanel(contextMenu.worldX, contextMenu.worldY, '收纳面板', 740);
+  };
+
   const handleResetView = () => {
     closeContextMenu();
     setViewport({ x: 0, y: 0, zoom: 1.0 });
@@ -43,11 +47,6 @@ export const CanvasContextMenu: React.FC = () => {
   const handleToggleGrid = () => {
     closeContextMenu();
     setGridSnapping(!gridSnapping);
-  };
-
-  const handleToggleDock = () => {
-    closeContextMenu();
-    toggleDockPanel();
   };
 
   return (
@@ -60,7 +59,7 @@ export const CanvasContextMenu: React.FC = () => {
       }}
       onClick={(e) => e.stopPropagation()}
     >
-      {/* Primary Action: Create Folder */}
+      {/* 1. 新建文件夹 */}
       <button
         onClick={handleCreateFolder}
         className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 hover:text-white transition-colors text-left font-medium group"
@@ -72,23 +71,21 @@ export const CanvasContextMenu: React.FC = () => {
         <span className="text-[10px] text-sky-400/60 font-mono">在此处</span>
       </button>
 
-      <div className="h-px bg-slate-800 my-1" />
-
-      {/* Toggle Dock Panel */}
+      {/* 2. 新建收纳面板 (Figure 2: 画布中的收纳面板块) */}
       <button
-        onClick={handleToggleDock}
-        className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-800/80 transition-colors text-left"
+        onClick={handleCreatePanel}
+        className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-800 text-left text-slate-200 hover:text-indigo-300 transition-colors mt-1"
       >
         <div className="flex items-center gap-2">
-          <Inbox className="w-4 h-4 text-indigo-400" />
-          <span>侧边收纳面板</span>
+          <LayoutGrid className="w-4 h-4 text-indigo-400" />
+          <span>新建收纳面板</span>
         </div>
-        <span className="text-[10px] text-slate-500">
-          {isDockPanelOpen ? '已展开' : '已收起'}
-        </span>
+        <span className="text-[10px] text-slate-500 font-mono">多列瀑布流</span>
       </button>
 
-      {/* Toggle Grid Snap */}
+      <div className="h-px bg-slate-800 my-1" />
+
+      {/* 3. 网格自动吸附 */}
       <button
         onClick={handleToggleGrid}
         className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-800/80 transition-colors text-left"
@@ -106,7 +103,7 @@ export const CanvasContextMenu: React.FC = () => {
         </span>
       </button>
 
-      {/* Reset View */}
+      {/* 4. 重置视图 */}
       <button
         onClick={handleResetView}
         className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/80 transition-colors text-left text-slate-400 hover:text-slate-200"

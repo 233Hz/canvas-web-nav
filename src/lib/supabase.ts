@@ -16,4 +16,5 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   },
 });
 
+export const db = supabase.schema('web_nav');
 export const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/fetch-metadata`;

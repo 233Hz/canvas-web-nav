@@ -11,6 +11,7 @@ export function useGroupDrag() {
     selectedFolderIds,
     setSelectedFolderIds,
     updateFoldersPositions,
+    moveFolderToPanel,
   } = useCanvasStore();
 
   const { getSnappedPosition, clearActiveGuides } = useSnapEngine();
@@ -25,7 +26,6 @@ export function useGroupDrag() {
       let activeSelection = [...selectedFolderIds];
 
       if (isShift) {
-        // Toggle in selection
         if (activeSelection.includes(folderId)) {
           activeSelection = activeSelection.filter((id) => id !== folderId);
         } else {
@@ -33,7 +33,6 @@ export function useGroupDrag() {
         }
         setSelectedFolderIds(activeSelection);
       } else if (!activeSelection.includes(folderId)) {
-        // Not previously selected, replace selection with just this folder
         activeSelection = [folderId];
         setSelectedFolderIds(activeSelection);
       }
@@ -44,7 +43,6 @@ export function useGroupDrag() {
       dragStartWorldRef.current = worldPt;
       primaryFolderIdRef.current = folderId;
 
-      // Cache initial positions of all selected folders
       const posMap = new Map<string, Point>();
       folders.forEach((f) => {
         if (activeSelection.includes(f.id)) {
@@ -77,7 +75,6 @@ export function useGroupDrag() {
       const proposedPrimaryX = primaryInitPos.x + rawDeltaX;
       const proposedPrimaryY = primaryInitPos.y + rawDeltaY;
 
-      // Snap primary folder against all non-selected folders
       const selectedIds = Array.from(initialPositionsRef.current.keys());
       const snapped = getSnappedPosition(
         primaryId,
@@ -88,11 +85,9 @@ export function useGroupDrag() {
         selectedIds
       );
 
-      // The effective delta applied to all selected items
       const effectiveDeltaX = snapped.x - primaryInitPos.x;
       const effectiveDeltaY = snapped.y - primaryInitPos.y;
 
-      // Update positions of all selected folders
       const updates = selectedIds.map((id) => {
         const init = initialPositionsRef.current.get(id)!;
         return {
@@ -108,20 +103,29 @@ export function useGroupDrag() {
   );
 
   const endGroupDrag = useCallback(
-    (screenX?: number) => {
+    (screenX?: number, screenY?: number) => {
       if (isDragging) {
-        const { isDockPanelOpen, dockPanelWidth, dockFolder } = useCanvasStore.getState();
+        const { panels } = useCanvasStore.getState();
         const primaryId = primaryFolderIdRef.current;
 
-        // Check if dropped into dock panel
-        if (
-          primaryId &&
-          isDockPanelOpen &&
-          screenX !== undefined &&
-          screenX >= window.innerWidth - dockPanelWidth
-        ) {
+        // Check if dropped into a Canvas Panel block
+        if (primaryId && screenX !== undefined && screenY !== undefined) {
+          const worldPt = screenToWorld({ x: screenX, y: screenY }, viewport);
+          const targetPanel = panels.find((p) => {
+            const minX = p.position_x;
+            const maxX = p.position_x + p.width;
+            const minY = p.position_y;
+            // Estimated panel height range
+            const maxY = p.position_y + (p.height || 600);
+            return worldPt.x >= minX && worldPt.x <= maxX && worldPt.y >= minY && worldPt.y <= maxY;
+          });
+
           const selectedIds = Array.from(initialPositionsRef.current.keys());
-          selectedIds.forEach((id) => dockFolder(id, true));
+
+          if (targetPanel) {
+            // Drop inside panel
+            selectedIds.forEach((id) => moveFolderToPanel(id, targetPanel.id));
+          }
         }
 
         setIsDragging(false);
@@ -130,7 +134,7 @@ export function useGroupDrag() {
         clearActiveGuides();
       }
     },
-    [isDragging, clearActiveGuides]
+    [isDragging, viewport, clearActiveGuides, moveFolderToPanel]
   );
 
   return {

@@ -9,7 +9,7 @@ import { MarqueeSelection } from './MarqueeSelection';
 import { CanvasContextMenu } from './CanvasContextMenu';
 import { CanvasToolbar } from './CanvasToolbar';
 import { FolderCard } from '../folder/FolderCard';
-import { DockPanel } from '../dock/DockPanel';
+import { PanelBlock } from '../panel/PanelBlock';
 import { CanvasDndContext } from '../dnd/CanvasDndContext';
 import { screenToWorld } from '../../lib/canvasMath';
 import { MousePointer } from 'lucide-react';
@@ -18,13 +18,13 @@ export const Canvas: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const {
+    panels,
     folders,
     links,
     viewport,
     selectedFolderIds,
     setContextMenu,
     closeContextMenu,
-    clearSelection,
   } = useCanvasStore();
 
   const {
@@ -82,7 +82,7 @@ export const Canvas: React.FC = () => {
       // Left click (button = 0) on canvas background -> Marquee selection
       if (e.button === 0) {
         const target = e.target as HTMLElement;
-        const isCard = target.closest('[data-folder-card="true"]') || target.closest('aside');
+        const isCard = target.closest('[data-folder-card="true"]') || target.closest('[data-panel-block="true"]');
 
         if (!isCard) {
           startMarquee(e.clientX, e.clientY, e.shiftKey);
@@ -110,7 +110,7 @@ export const Canvas: React.FC = () => {
   const handlePointerUp = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (isPanning) endPan();
-      if (isGroupDragging) endGroupDrag(e.clientX);
+      if (isGroupDragging) endGroupDrag(e.clientX, e.clientY);
       if (isMarqueeSelecting) endMarquee();
     },
     [isPanning, isGroupDragging, isMarqueeSelecting, endPan, endGroupDrag, endMarquee]
@@ -129,8 +129,8 @@ export const Canvas: React.FC = () => {
     ? 'cursor-move'
     : 'cursor-default';
 
-  // Folders on the infinite canvas (undocked ones)
-  const canvasFolders = folders.filter((f) => !f.is_docked);
+  // Folders on the open canvas (not contained in any panel)
+  const freeFolders = folders.filter((f) => !f.panel_id);
 
   return (
     <div
@@ -144,7 +144,7 @@ export const Canvas: React.FC = () => {
       {/* Background Dot Grid */}
       <CanvasBackground viewport={viewport} />
 
-      {/* DND Context Wrapping Both Canvas World Layer and DockPanel */}
+      {/* DND Context Wrapping World Layer */}
       <CanvasDndContext>
         {/* World Layer (Transformed with zoom & pan) */}
         <div
@@ -153,7 +153,20 @@ export const Canvas: React.FC = () => {
             transform: `translate3d(${viewport.x}px, ${viewport.y}px, 0) scale(${viewport.zoom})`,
           }}
         >
-          {canvasFolders.map((folder) => {
+          {/* 1. Canvas Panel Blocks (Figure 2: 面板归纳块) */}
+          {panels.map((panel) => (
+            <div key={panel.id} data-panel-block="true">
+              <PanelBlock
+                panel={panel}
+                folders={folders}
+                links={links}
+                onStartGroupDrag={startGroupDrag}
+              />
+            </div>
+          ))}
+
+          {/* 2. Free Folders on the Canvas (Figure 1: 文件夹块) */}
+          {freeFolders.map((folder) => {
             const folderLinks = links.filter((l) => l.folder_id === folder.id);
             const isSelected = selectedFolderIds.includes(folder.id);
 
@@ -163,26 +176,25 @@ export const Canvas: React.FC = () => {
                   folder={folder}
                   links={folderLinks}
                   isSelected={isSelected}
+                  isInPanel={false}
                   onStartGroupDrag={startGroupDrag}
                 />
               </div>
             );
           })}
 
-          {canvasFolders.length === 0 && (
+          {/* Empty hint */}
+          {freeFolders.length === 0 && panels.length === 0 && (
             <div
               className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center p-8 border border-dashed border-slate-800 rounded-3xl bg-slate-900/40 text-slate-500 pointer-events-none select-none text-center"
               style={{ minWidth: 320 }}
             >
               <MousePointer className="w-8 h-8 text-sky-400 mb-2 animate-bounce" />
               <p className="text-sm font-semibold text-slate-300">空白画布区域</p>
-              <p className="text-xs text-slate-500 mt-1">鼠标右键点击任意处，即可新建文件夹</p>
+              <p className="text-xs text-slate-500 mt-1">鼠标右键点击任意处，即可新建文件夹或收纳面板</p>
             </div>
           )}
         </div>
-
-        {/* Resizable Dock Panel with Waterfall Masonry Layout */}
-        <DockPanel />
       </CanvasDndContext>
 
       {/* Overlays in Screen Coordinate Space */}

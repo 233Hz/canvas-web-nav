@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
-import { Plus } from 'lucide-react';
 import { Folder, LinkItem } from '../../types/database';
 import { FolderHeader } from './FolderHeader';
 import { FolderContextMenu } from './FolderContextMenu';
@@ -15,7 +14,7 @@ interface FolderCardProps {
   folder: Folder;
   links: LinkItem[];
   isSelected?: boolean;
-  inDock?: boolean;
+  isInPanel?: boolean;
   onStartGroupDrag?: (folderId: string, screenX: number, screenY: number, isShift: boolean) => void;
 }
 
@@ -23,7 +22,7 @@ export const FolderCard: React.FC<FolderCardProps> = ({
   folder,
   links,
   isSelected = false,
-  inDock = false,
+  isInPanel = false,
   onStartGroupDrag,
 }) => {
   const {
@@ -32,7 +31,8 @@ export const FolderCard: React.FC<FolderCardProps> = ({
     createLink,
     updateLink,
     deleteLink,
-    dockFolder,
+    moveFolderToPanel,
+    panels,
     activeTargetFolderId,
   } = useCanvasStore();
 
@@ -57,7 +57,7 @@ export const FolderCard: React.FC<FolderCardProps> = ({
 
   // Only the Header drag handle triggers folder group dragging!
   const handleHeaderPointerDown = (e: React.PointerEvent) => {
-    if (inDock || !onStartGroupDrag) return;
+    if (isInPanel || !onStartGroupDrag) return;
     if (e.button !== 0) return;
 
     e.stopPropagation();
@@ -70,9 +70,19 @@ export const FolderCard: React.FC<FolderCardProps> = ({
     setContextMenuPos({ x: e.clientX, y: e.clientY });
   };
 
-  const folderWidth = folder.width || 340;
-  // If width is >= 340, 4 columns; otherwise 3 columns
-  const gridColsClass = folderWidth >= 330 ? 'grid-cols-4' : 'grid-cols-3';
+  // Figure 1 uses 5 columns layout
+  const folderWidth = folder.width || 380;
+  const gridColsClass = folderWidth >= 380 ? 'grid-cols-5' : folderWidth >= 310 ? 'grid-cols-4' : 'grid-cols-3';
+
+  const handleTogglePanel = () => {
+    if (folder.panel_id) {
+      // Move out to free canvas
+      moveFolderToPanel(folder.id, null);
+    } else if (panels.length > 0) {
+      // Move to first panel
+      moveFolderToPanel(folder.id, panels[0].id);
+    }
+  };
 
   return (
     <>
@@ -80,96 +90,83 @@ export const FolderCard: React.FC<FolderCardProps> = ({
         ref={setNodeRef}
         onContextMenu={handleContextMenu}
         style={
-          inDock
+          isInPanel
             ? undefined
             : {
                 transform: `translate3d(${folder.position_x}px, ${folder.position_y}px, 0)`,
                 width: `${folderWidth}px`,
               }
         }
-        className={`rounded-3xl bg-slate-900/80 backdrop-blur-2xl border transition-all duration-150 select-none ${
-          inDock
-            ? 'w-full mb-3.5 break-inside-avoid border-slate-700/60 hover:border-slate-600/80 shadow-lg shadow-black/20'
+        className={`rounded-2xl bg-slate-900/90 backdrop-blur-xl border transition-all duration-150 select-none ${
+          isInPanel
+            ? 'w-full mb-3.5 break-inside-avoid border-slate-700/80 shadow-lg shadow-black/20'
             : `absolute top-0 left-0 ${
                 isSelected
                   ? 'ring-2 ring-sky-400 border-sky-400/90 shadow-2xl shadow-sky-500/25 z-10'
                   : isDropTargetActive
                   ? 'ring-2 ring-blue-500 border-blue-400 bg-slate-900/95 shadow-xl shadow-blue-500/25 z-10'
-                  : 'border-slate-700/60 hover:border-slate-600/80 shadow-2xl shadow-black/40 z-0'
+                  : 'border-slate-700/80 hover:border-slate-600/90 shadow-xl shadow-black/40 z-0'
               }`
         }`}
       >
-        {/* Header - only this bar can initiate folder dragging */}
+        {/* Header - Left: Title, Right: Three dots ... as in Figure 1 */}
         <FolderHeader
           folder={folder}
-          linkCount={sortedLinks.length}
-          isDocked={inDock}
           onUpdateTitle={(newTitle) => updateFolder(folder.id, { title: newTitle })}
           onOpenMenu={(e) => {
             e.stopPropagation();
             setContextMenuPos({ x: e.clientX, y: e.clientY });
           }}
-          onToggleDock={() => dockFolder(folder.id, !folder.is_docked)}
           dragHandleProps={{
             onPointerDown: handleHeaderPointerDown,
           }}
         />
 
-        {/* iOS-Style App Icons Grid Container */}
+        {/* Clean App Icons Grid matching Figure 1 (No inline plus button) */}
         <div className="p-3">
           <SortableContext
             items={sortedLinks.map((l) => l.id)}
             strategy={rectSortingStrategy}
           >
-            <div className={`grid ${gridColsClass} gap-2.5 justify-items-center min-h-[74px]`}>
-              {sortedLinks.map((link) => (
-                <LinkItemCard
-                  key={link.id}
-                  link={link}
-                  onEdit={(item) => setEditingLink(item)}
-                  onDelete={(id) => deleteLink(id)}
-                />
-              ))}
-
-              {/* Quick Add Link Icon within Grid */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsAddLinkOpen(true);
-                }}
-                title="添加新网址"
-                className="flex flex-col items-center justify-start p-1.5 rounded-2xl group hover:bg-slate-800/40 transition-colors w-[68px] cursor-pointer"
+            {sortedLinks.length === 0 ? (
+              <div
+                onClick={() => setIsAddLinkOpen(true)}
+                className="py-6 text-center text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl cursor-pointer hover:border-sky-500/50 hover:text-sky-400 transition-colors"
               >
-                <div className="w-12 h-12 rounded-2xl border border-dashed border-slate-700 hover:border-sky-400/70 hover:bg-sky-500/10 flex items-center justify-center text-slate-500 hover:text-sky-300 transition-all shadow-sm">
-                  <Plus className="w-5 h-5" />
-                </div>
-                <span className="mt-1.5 text-[11px] text-slate-500 group-hover:text-sky-300 font-medium transition-colors">
-                  添加
-                </span>
-              </button>
-            </div>
+                暂无图标，点击此处或右上角 ··· 添加
+              </div>
+            ) : (
+              <div className={`grid ${gridColsClass} gap-2.5 justify-items-center min-h-[70px]`}>
+                {sortedLinks.map((link) => (
+                  <LinkItemCard
+                    key={link.id}
+                    link={link}
+                    onEdit={(item) => setEditingLink(item)}
+                    onDelete={(id) => deleteLink(id)}
+                  />
+                ))}
+              </div>
+            )}
           </SortableContext>
         </div>
       </div>
 
-      {/* Context Menu */}
+      {/* Two-level Dropdown Menu matching Figure 1 */}
       {contextMenuPos && (
         <FolderContextMenu
           isOpen={!!contextMenuPos}
           folder={folder}
           position={contextMenuPos}
           onClose={() => setContextMenuPos(null)}
+          onAddLink={() => setIsAddLinkOpen(true)}
           onRename={() => {
             const newTitle = prompt('重命名文件夹', folder.title);
             if (newTitle && newTitle.trim()) {
               updateFolder(folder.id, { title: newTitle.trim() });
             }
           }}
-          onAddLink={() => setIsAddLinkOpen(true)}
-          onChangeColor={(color) => updateFolder(folder.id, { color })}
           onDelete={() => setIsDeleteConfirmOpen(true)}
-          onToggleDock={() => dockFolder(folder.id, !folder.is_docked)}
+          onTogglePanel={panels.length > 0 || folder.panel_id ? handleTogglePanel : undefined}
         />
       )}
 

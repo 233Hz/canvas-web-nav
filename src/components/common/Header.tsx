@@ -1,17 +1,27 @@
 import React from 'react';
-import { Compass, HelpCircle, Inbox, MousePointer } from 'lucide-react';
-import { SyncStatusBadge } from './SyncStatusBadge';
+import { Compass, HelpCircle, CloudUpload, Check, Loader2 } from 'lucide-react';
 import { UserProfileMenu } from '../auth/UserProfileMenu';
 import { useCanvasStore } from '../../store/canvasStore';
 
 export const Header: React.FC = () => {
-  const { folders, toggleDockPanel, isDockPanelOpen } = useCanvasStore();
+  const {
+    hasUnsavedChanges,
+    isUploading,
+    lastSavedTime,
+    uploadToSupabase,
+  } = useCanvasStore();
 
-  const dockedCount = folders.filter((f) => f.is_docked).length;
+  const handleUpload = async () => {
+    if (isUploading) return;
+    const ok = await uploadToSupabase();
+    if (ok) {
+      // Done
+    }
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 h-14 px-4 flex items-center justify-between pointer-events-none select-none">
-      {/* Left: Brand & Right-click tip */}
+      {/* Left: Brand & Prompt */}
       <div className="flex items-center gap-3 pointer-events-auto">
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-slate-900/85 backdrop-blur-md border border-slate-700/70 shadow-lg">
           <div className="w-6 h-6 rounded-lg bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-400">
@@ -25,45 +35,48 @@ export const Header: React.FC = () => {
           </span>
         </div>
 
-        {/* Subtle Right Click Hint Badge */}
         <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/60 backdrop-blur-md border border-slate-800 text-[11px] text-slate-400">
-          <MousePointer className="w-3 h-3 text-sky-400" />
-          <span>空白处右键新建文件夹</span>
+          <span>空白处右键新建文件夹与收纳面板</span>
         </div>
       </div>
 
-      {/* Right: Actions, Dock Panel Toggle, Sync Badge, Auth & Github */}
+      {/* Right: Upload to Supabase button, Help, Auth & Github */}
       <div className="flex items-center gap-2 pointer-events-auto">
-        {/* Toggle Dock Panel Button */}
+        {/* Prominent Upload & Save to Supabase (web_nav schema) Button */}
         <button
-          onClick={toggleDockPanel}
-          title="展开/收起侧边收纳面板"
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl border text-xs font-medium transition-all shadow-md ${
-            isDockPanelOpen
-              ? 'bg-sky-500/20 border-sky-400/50 text-sky-300 shadow-sky-500/10'
-              : 'bg-slate-900/85 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-800/80'
+          onClick={handleUpload}
+          disabled={isUploading}
+          title="点击将当前画布、面板与文件夹配置保存到 Supabase (web_nav schema)"
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl border text-xs font-semibold transition-all shadow-md active:scale-95 ${
+            hasUnsavedChanges
+              ? 'bg-sky-500 hover:bg-sky-400 text-slate-950 border-sky-400 shadow-sky-500/25 animate-pulse'
+              : 'bg-slate-900/85 hover:bg-slate-800 border-slate-700/60 text-slate-300'
           }`}
         >
-          <Inbox className="w-3.5 h-3.5 text-sky-400" />
-          <span>收纳箱</span>
-          {dockedCount > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-sky-500 text-slate-950 font-bold text-[10px] font-mono">
-              {dockedCount}
-            </span>
+          {isUploading ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>上传中...</span>
+            </>
+          ) : hasUnsavedChanges ? (
+            <>
+              <CloudUpload className="w-3.5 h-3.5" />
+              <span>上传保存到云端</span>
+            </>
+          ) : (
+            <>
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+              <span>已同步云端 {lastSavedTime ? `(${lastSavedTime})` : ''}</span>
+            </>
           )}
         </button>
 
         {/* Help tip */}
         <div
-          title="操作指南:&#10;• 画布空白处右键: 新建文件夹&#10;• 按住空格键或鼠标中键: 自由平移画布&#10;• 鼠标滚轮: 以光标为原点缩放&#10;• 空白处拖拽: 框选多个文件夹成组移动&#10;• 拖动文件夹: 自动吸附并显示高亮对齐线&#10;• 图标拖动: 宫格排序与跨块移动&#10;• 侧边面板: 可收纳文件夹并自由调整宽度"
+          title="操作指南:&#10;• 空白处右键: 新建文件夹 / 新建收纳面板&#10;• 面板右侧手柄: 拖拽自适应改变宽度&#10;• 文件夹菜单: 点击 ··· 添加图标或删除&#10;• 空白处拖拽: 框选多个块成组移动&#10;• 点击右上角:「上传保存到云端」持久化至 Supabase"
           className="p-2 rounded-full bg-slate-900/85 backdrop-blur-md border border-slate-700/60 text-slate-400 hover:text-slate-200 cursor-help transition-colors shadow-sm hidden md:flex items-center"
         >
           <HelpCircle className="w-4 h-4" />
-        </div>
-
-        {/* Sync Status Badge */}
-        <div className="bg-slate-900/85 backdrop-blur-md border border-slate-700/60 rounded-full shadow-sm p-0.5">
-          <SyncStatusBadge />
         </div>
 
         {/* User Auth Profile Menu */}
@@ -71,7 +84,7 @@ export const Header: React.FC = () => {
 
         {/* GitHub link */}
         <a
-          href="https://github.com"
+          href="https://github.com/233Hz/canvas-web-nav"
           target="_blank"
           rel="noopener noreferrer"
           title="查看 GitHub 仓库"

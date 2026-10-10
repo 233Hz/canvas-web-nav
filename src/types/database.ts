@@ -1,4 +1,4 @@
-export interface Folder {
+export interface PanelBlock {
   id: string;
   user_id: string;
   title: string;
@@ -6,9 +6,21 @@ export interface Folder {
   position_y: number;
   width: number;
   height: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Folder {
+  id: string;
+  user_id: string;
+  panel_id?: string | null;
+  title: string;
+  position_x: number;
+  position_y: number;
+  width: number;
+  height: number | null;
   color: string;
-  is_docked?: boolean;
-  docked_order?: number;
+  order_index?: number;
   created_at: string;
   updated_at: string;
 }
