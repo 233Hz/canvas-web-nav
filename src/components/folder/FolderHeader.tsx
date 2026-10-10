@@ -1,0 +1,114 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { MoreHorizontal, GripHorizontal } from 'lucide-react';
+import { Folder } from '../../types/database';
+
+interface FolderHeaderProps {
+  folder: Folder;
+  linkCount: number;
+  onUpdateTitle: (newTitle: string) => void;
+  onOpenMenu: (e: React.MouseEvent) => void;
+  dragHandleProps?: Record<string, any>;
+}
+
+export const FolderHeader: React.FC<FolderHeaderProps> = ({
+  folder,
+  linkCount,
+  onUpdateTitle,
+  onOpenMenu,
+  dragHandleProps,
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [titleInput, setTitleInput] = useState(folder.title);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setTitleInput(folder.title);
+  }, [folder.title]);
+
+  useEffect(() => {
+    if (isEditing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [isEditing]);
+
+  const handleFinishEdit = () => {
+    setIsEditing(false);
+    const trimmed = titleInput.trim();
+    if (trimmed && trimmed !== folder.title) {
+      onUpdateTitle(trimmed);
+    } else {
+      setTitleInput(folder.title);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleFinishEdit();
+    } else if (e.key === 'Escape') {
+      setTitleInput(folder.title);
+      setIsEditing(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-slate-700/60 bg-slate-900/60 select-none rounded-t-2xl">
+      {/* Drag handle & Title */}
+      <div className="flex items-center gap-2 flex-1 min-w-0" {...dragHandleProps}>
+        {/* Color Dot indicator */}
+        <span
+          className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
+          style={{ backgroundColor: folder.color || '#3b82f6' }}
+        />
+
+        {isEditing ? (
+          <input
+            ref={inputRef}
+            type="text"
+            value={titleInput}
+            onChange={(e) => setTitleInput(e.target.value)}
+            onBlur={handleFinishEdit}
+            onKeyDown={handleKeyDown}
+            className="w-full text-xs font-semibold bg-slate-950 text-slate-100 border border-sky-500 rounded px-1.5 py-0.5 focus:outline-none"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <div
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+            }}
+            title="双击重命名标题"
+            className="flex items-center gap-1.5 min-w-0 cursor-text"
+          >
+            <span className="text-xs font-semibold text-slate-200 truncate hover:text-white">
+              {folder.title}
+            </span>
+            <span className="text-[10px] text-slate-500 font-mono px-1 py-0.2 rounded bg-slate-800/80">
+              {linkCount}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Right controls: Drag grip indicator + Menu button */}
+      <div className="flex items-center gap-1">
+        <div
+          {...dragHandleProps}
+          title="拖动块位置"
+          className="cursor-grab active:cursor-grabbing p-1 text-slate-500 hover:text-slate-300 transition-colors"
+        >
+          <GripHorizontal className="w-3.5 h-3.5" />
+        </div>
+
+        <button
+          onClick={onOpenMenu}
+          title="文件夹操作菜单"
+          className="p-1 rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+        >
+          <MoreHorizontal className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+};
