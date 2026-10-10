@@ -6,6 +6,7 @@ interface FolderHeaderProps {
   folder: Folder;
   onUpdateTitle: (newTitle: string) => void;
   onOpenMenu: (e: React.MouseEvent) => void;
+  menuContent?: React.ReactNode;
   dragHandleProps?: Record<string, any>;
 }
 
@@ -13,6 +14,7 @@ export const FolderHeader: React.FC<FolderHeaderProps> = ({
   folder,
   onUpdateTitle,
   onOpenMenu,
+  menuContent,
   dragHandleProps,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -89,17 +91,21 @@ export const FolderHeader: React.FC<FolderHeaderProps> = ({
         </div>
 
         {/* Three dots menu button matching Figure 1 */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenMenu(e);
-          }}
-          title="菜单"
-          className="p-1 rounded-md text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <MoreHorizontal className="w-4 h-4" />
-        </button>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenMenu(e);
+            }}
+            title="更多操作"
+            className="p-1 rounded-md text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <MoreHorizontal className="w-4 h-4" />
+          </button>
+          {menuContent}
+        </div>
       </div>
 
       {/* Horizontal divider line under header matching Figure 1 */}

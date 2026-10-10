@@ -41,7 +41,7 @@ export const FolderCard: React.FC<FolderCardProps> = ({
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   // Folder context menu state
-  const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // DND Droppable registration for this folder container
   const { setNodeRef, isOver } = useDroppable({
@@ -67,7 +67,7 @@ export const FolderCard: React.FC<FolderCardProps> = ({
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setContextMenuPos({ x: e.clientX, y: e.clientY });
+    setIsMenuOpen(true);
   };
 
   // Figure 1 uses 5 columns layout
@@ -113,10 +113,25 @@ export const FolderCard: React.FC<FolderCardProps> = ({
         <FolderHeader
           folder={folder}
           onUpdateTitle={(newTitle) => updateFolder(folder.id, { title: newTitle })}
-          onOpenMenu={(e) => {
-            e.stopPropagation();
-            setContextMenuPos({ x: e.clientX, y: e.clientY });
-          }}
+          onOpenMenu={() => setIsMenuOpen(!isMenuOpen)}
+          menuContent={
+            isMenuOpen ? (
+              <FolderContextMenu
+                isOpen={isMenuOpen}
+                folder={folder}
+                onClose={() => setIsMenuOpen(false)}
+                onAddLink={() => setIsAddLinkOpen(true)}
+                onRename={() => {
+                  const newTitle = prompt('重命名文件夹', folder.title);
+                  if (newTitle && newTitle.trim()) {
+                    updateFolder(folder.id, { title: newTitle.trim() });
+                  }
+                }}
+                onDelete={() => setIsDeleteConfirmOpen(true)}
+                onTogglePanel={panels.length > 0 || folder.panel_id ? handleTogglePanel : undefined}
+              />
+            ) : null
+          }
           dragHandleProps={{
             onPointerDown: handleHeaderPointerDown,
           }}
@@ -150,25 +165,6 @@ export const FolderCard: React.FC<FolderCardProps> = ({
           </SortableContext>
         </div>
       </div>
-
-      {/* Two-level Dropdown Menu matching Figure 1 */}
-      {contextMenuPos && (
-        <FolderContextMenu
-          isOpen={!!contextMenuPos}
-          folder={folder}
-          position={contextMenuPos}
-          onClose={() => setContextMenuPos(null)}
-          onAddLink={() => setIsAddLinkOpen(true)}
-          onRename={() => {
-            const newTitle = prompt('重命名文件夹', folder.title);
-            if (newTitle && newTitle.trim()) {
-              updateFolder(folder.id, { title: newTitle.trim() });
-            }
-          }}
-          onDelete={() => setIsDeleteConfirmOpen(true)}
-          onTogglePanel={panels.length > 0 || folder.panel_id ? handleTogglePanel : undefined}
-        />
-      )}
 
       {/* Add Link Dialog */}
       <AddLinkDialog

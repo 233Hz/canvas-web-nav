@@ -5,7 +5,7 @@ import { Folder } from '../../types/database';
 interface FolderContextMenuProps {
   isOpen: boolean;
   folder: Folder;
-  position: { x: number; y: number };
+  position?: { x: number; y: number };
   onClose: () => void;
   onRename: () => void;
   onAddLink: () => void;
@@ -16,7 +16,6 @@ interface FolderContextMenuProps {
 export const FolderContextMenu: React.FC<FolderContextMenuProps> = ({
   isOpen,
   folder,
-  position,
   onClose,
   onRename,
   onAddLink,
@@ -26,15 +25,23 @@ export const FolderContextMenu: React.FC<FolderContextMenuProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (e: PointerEvent | MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         onClose();
       }
     };
-    if (isOpen) {
+
+    // Small delay so opening click doesn't trigger outside click immediately
+    const timer = setTimeout(() => {
       window.addEventListener('pointerdown', handleClickOutside);
-    }
-    return () => window.removeEventListener('pointerdown', handleClickOutside);
+    }, 10);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('pointerdown', handleClickOutside);
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -42,15 +49,13 @@ export const FolderContextMenu: React.FC<FolderContextMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 min-w-[150px] bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl p-1 text-xs text-slate-200 animate-in fade-in zoom-in-95 duration-100 select-none"
-      style={{
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-      }}
+      className="absolute right-0 top-full mt-1.5 z-50 min-w-[155px] bg-slate-900/95 backdrop-blur-xl border border-slate-700/90 rounded-xl shadow-2xl p-1 text-xs text-slate-200 animate-in fade-in zoom-in-95 duration-100 select-none"
       onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
     >
       {/* 1. 添加图标 (Figure 1: 添加图标) */}
       <button
+        type="button"
         onClick={() => {
           onClose();
           onAddLink();
@@ -64,6 +69,7 @@ export const FolderContextMenu: React.FC<FolderContextMenuProps> = ({
       {/* 2. 移出面板 / 收纳到面板 (if applicable) */}
       {onTogglePanel && (
         <button
+          type="button"
           onClick={() => {
             onClose();
             onTogglePanel();
@@ -86,6 +92,7 @@ export const FolderContextMenu: React.FC<FolderContextMenuProps> = ({
 
       {/* 3. 重命名 */}
       <button
+        type="button"
         onClick={() => {
           onClose();
           onRename();
@@ -100,6 +107,7 @@ export const FolderContextMenu: React.FC<FolderContextMenuProps> = ({
 
       {/* 4. 删除 (Figure 1: 删除) */}
       <button
+        type="button"
         onClick={() => {
           onClose();
           onDelete();

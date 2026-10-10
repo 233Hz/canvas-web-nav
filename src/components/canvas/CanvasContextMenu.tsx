@@ -16,15 +16,23 @@ export const CanvasContextMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    if (!contextMenu.isOpen) return;
+
+    const handleClickOutside = (e: MouseEvent | PointerEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         closeContextMenu();
       }
     };
-    if (contextMenu.isOpen) {
+
+    // Delay listening by 20ms so the initial contextmenu/pointer event does not immediately close the menu
+    const timer = setTimeout(() => {
       window.addEventListener('pointerdown', handleClickOutside);
-    }
-    return () => window.removeEventListener('pointerdown', handleClickOutside);
+    }, 20);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('pointerdown', handleClickOutside);
+    };
   }, [contextMenu.isOpen, closeContextMenu]);
 
   if (!contextMenu.isOpen) return null;
@@ -49,18 +57,26 @@ export const CanvasContextMenu: React.FC = () => {
     setGridSnapping(!gridSnapping);
   };
 
+  // Clamp menu inside window bounds
+  const menuWidth = 210;
+  const menuHeight = 190;
+  const clampedX = Math.min(contextMenu.screenX, Math.max(12, window.innerWidth - menuWidth - 12));
+  const clampedY = Math.min(contextMenu.screenY, Math.max(12, window.innerHeight - menuHeight - 12));
+
   return (
     <div
       ref={menuRef}
       className="fixed z-50 min-w-[200px] bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl shadow-2xl p-1.5 text-xs text-slate-200 animate-in fade-in zoom-in-95 duration-100 select-none"
       style={{
-        left: `${contextMenu.screenX}px`,
-        top: `${contextMenu.screenY}px`,
+        left: `${clampedX}px`,
+        top: `${clampedY}px`,
       }}
       onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
     >
       {/* 1. 新建文件夹 */}
       <button
+        type="button"
         onClick={handleCreateFolder}
         className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 hover:text-white transition-colors text-left font-medium group"
       >
@@ -71,8 +87,9 @@ export const CanvasContextMenu: React.FC = () => {
         <span className="text-[10px] text-sky-400/60 font-mono">在此处</span>
       </button>
 
-      {/* 2. 新建收纳面板 (Figure 2: 画布中的收纳面板块) */}
+      {/* 2. 新建收纳面板 */}
       <button
+        type="button"
         onClick={handleCreatePanel}
         className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-800 text-left text-slate-200 hover:text-indigo-300 transition-colors mt-1"
       >
@@ -87,6 +104,7 @@ export const CanvasContextMenu: React.FC = () => {
 
       {/* 3. 网格自动吸附 */}
       <button
+        type="button"
         onClick={handleToggleGrid}
         className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-800/80 transition-colors text-left"
       >
@@ -105,6 +123,7 @@ export const CanvasContextMenu: React.FC = () => {
 
       {/* 4. 重置视图 */}
       <button
+        type="button"
         onClick={handleResetView}
         className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/80 transition-colors text-left text-slate-400 hover:text-slate-200"
       >

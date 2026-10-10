@@ -53,22 +53,42 @@ export const Canvas: React.FC = () => {
     endGroupDrag,
   } = useGroupDrag();
 
+  // Open context menu helper
+  const openCanvasMenuAt = useCallback(
+    (clientX: number, clientY: number) => {
+      const worldPt = screenToWorld({ x: clientX, y: clientY }, viewport);
+      setContextMenu({
+        isOpen: true,
+        screenX: clientX,
+        screenY: clientY,
+        worldX: Math.round(worldPt.x),
+        worldY: Math.round(worldPt.y),
+      });
+    },
+    [viewport, setContextMenu]
+  );
+
   // Pointer Down on canvas
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
-      closeContextMenu();
+      // Left click closes open context menu
+      if (e.button === 0) {
+        closeContextMenu();
+      }
 
-      // Right Click (button = 2) -> Open context menu
+      // Right Click (button = 2) -> Open context menu if on blank canvas
       if (e.button === 2) {
         e.preventDefault();
-        const worldPt = screenToWorld({ x: e.clientX, y: e.clientY }, viewport);
-        setContextMenu({
-          isOpen: true,
-          screenX: e.clientX,
-          screenY: e.clientY,
-          worldX: Math.round(worldPt.x),
-          worldY: Math.round(worldPt.y),
-        });
+        const target = e.target as HTMLElement;
+        const isInteractive =
+          target.closest('[data-folder-card="true"]') ||
+          target.closest('[data-panel-block="true"]') ||
+          target.closest('button') ||
+          target.closest('input');
+
+        if (!isInteractive) {
+          openCanvasMenuAt(e.clientX, e.clientY);
+        }
         return;
       }
 
@@ -89,7 +109,7 @@ export const Canvas: React.FC = () => {
         }
       }
     },
-    [closeContextMenu, isSpacePressed, startPan, startMarquee, viewport, setContextMenu]
+    [closeContextMenu, isSpacePressed, startPan, startMarquee, openCanvasMenuAt]
   );
 
   // Pointer Move on canvas
@@ -116,10 +136,25 @@ export const Canvas: React.FC = () => {
     [isPanning, isGroupDragging, isMarqueeSelecting, endPan, endGroupDrag, endMarquee]
   );
 
-  // Prevent default context menu so our custom context menu takes effect
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-  };
+  // Prevent default context menu and trigger canvas context menu on blank area
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const target = e.target as HTMLElement;
+      const isInteractive =
+        target.closest('[data-folder-card="true"]') ||
+        target.closest('[data-panel-block="true"]') ||
+        target.closest('button') ||
+        target.closest('input');
+
+      if (!isInteractive) {
+        openCanvasMenuAt(e.clientX, e.clientY);
+      }
+    },
+    [openCanvasMenuAt]
+  );
 
   const cursorClass = isPanning
     ? 'cursor-grabbing'

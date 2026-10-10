@@ -324,15 +324,57 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     set({ isUploading: true });
 
     try {
-      // 1. Upsert all current records
-      if (panels.length > 0) {
-        await db.from('panels').upsert(panels);
+      // 1. Sanitize & whitelisted payloads matching database schema
+      const cleanPanels = panels.map((p) => ({
+        id: p.id,
+        user_id: userId,
+        title: p.title || '面板',
+        position_x: Number(p.position_x) || 0,
+        position_y: Number(p.position_y) || 0,
+        width: Number(p.width) || 740,
+        height: p.height !== null && p.height !== undefined ? Number(p.height) : null,
+        created_at: p.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }));
+
+      const cleanFolders = folders.map((f, idx) => ({
+        id: f.id,
+        user_id: userId,
+        panel_id: f.panel_id && f.panel_id.trim() ? f.panel_id : null,
+        title: f.title || '文件夹',
+        position_x: Number(f.position_x) || 0,
+        position_y: Number(f.position_y) || 0,
+        width: Number(f.width) || 340,
+        height: f.height !== null && f.height !== undefined ? Number(f.height) : null,
+        color: f.color || '#3b82f6',
+        order_index: typeof f.order_index === 'number' ? f.order_index : idx,
+        created_at: f.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }));
+
+      const cleanLinks = links.map((l, idx) => ({
+        id: l.id,
+        user_id: userId,
+        folder_id: l.folder_id,
+        title: l.title || '链接',
+        url: l.url || '',
+        icon_url: l.icon_url || null,
+        order_index: typeof l.order_index === 'number' ? l.order_index : idx,
+        created_at: l.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }));
+
+      if (cleanPanels.length > 0) {
+        const { error: pErr } = await db.from('panels').upsert(cleanPanels);
+        if (pErr) throw pErr;
       }
-      if (folders.length > 0) {
-        await db.from('folders').upsert(folders);
+      if (cleanFolders.length > 0) {
+        const { error: fErr } = await db.from('folders').upsert(cleanFolders);
+        if (fErr) throw fErr;
       }
-      if (links.length > 0) {
-        await db.from('links').upsert(links);
+      if (cleanLinks.length > 0) {
+        const { error: lErr } = await db.from('links').upsert(cleanLinks);
+        if (lErr) throw lErr;
       }
 
       // 2. Clean up removed records in reverse dependency order (links -> folders -> panels)
